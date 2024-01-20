@@ -7,8 +7,8 @@ namespace Reaction_orders
 {
     internal class Program
     {
-        static double k = 1.38*Math.Pow(10, -23);
-        static double T =15;
+        static double k = 1.38*Math.Pow(10, -23);//Boltzman constant
+        static double T =15;//Temperature
         // static double M_a = 18;    //Molar mass
         //static double M_b = 18;    //Molar mass
 
@@ -18,7 +18,7 @@ namespace Reaction_orders
         //static double n_b = 10000;
         //static double E0 = 40000;//J/mol
         static double E0 = 400;//J/mol
-        static double V = 1;
+        static double V = 1;//Volume
         //static double Q_a = 1;
         //static double Q_b = 1;
         static double h= 6.62 * Math.Pow(10, -34);
@@ -26,9 +26,9 @@ namespace Reaction_orders
         static double R = 8.314;
         static double pi = Math.PI;
         static double z = 6;
-        static double[] M;
+        static double[] M;//Molar masses
        // static double[] r;
-        static double[] n;
+        static double[] n;//Amounts
         static double[] Q;
         static double[][] LJparameters;
         static double[][] sigmaMatrix;
@@ -126,12 +126,18 @@ namespace Reaction_orders
 
             ReactionOrdersForDifferntCompositions(20);
 
-            Console.WriteLine("Pressure: " + CalculatePressureAtCurrentConditions());
+            //Console.WriteLine("Pressure: " + CalculatePressureAtCurrentConditions());
 
-             log_writer.Close();
-             Console.WriteLine("Main is done");
+            log_writer.Close();
+            Console.WriteLine("Main is done");
          }
          static string isotherm_writer_line;
+            /// <summary>
+            /// Calculates volume for particular pressure and composition of system
+            /// </summary>
+            /// <param name="targetPressure"></param>
+            /// <param name="Vaccuracy"></param>
+            /// <returns></returns>
          static double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy=0.001)
          {
             return BisectionSolve(ComponentPartialVolumeEquation, Vaccuracy, 0.1, 50, 1, new List<double>() { targetPressure, n[0], n[1] });
@@ -185,7 +191,12 @@ namespace Reaction_orders
              log_writer.WriteLine("-----------------------------------Find Volume Corresponding To ParticularPressure-------------------------------------");
              return outputV;
          }
-         static void ReactionOrdersForDifferntCompositions(int steps = 5, double n_sum=35000)
+         /// <summary>
+         /// Calculates reaction orders for different compositions of two component system
+         /// </summary>
+         /// <param name="steps"></param>
+         /// <param name="n_sum"></param>
+        static void ReactionOrdersForDifferntCompositions(int steps = 5, double n_sum=35000)
         {
             StreamWriter orderWriter = new StreamWriter("orders.csv");
             orderWriter.WriteLine("x0;x1;V;absolute;relative");
@@ -206,6 +217,10 @@ namespace Reaction_orders
             }
             orderWriter.Close();
         }
+        /// <summary>
+        /// Calculates all types of reaction orders for particular conditions
+        /// </summary>
+        /// <returns></returns>
          static List<double> CalculateReactionOrders()
          {
             List<double> output = new List<double>();
@@ -592,10 +607,6 @@ namespace Reaction_orders
                 //Console.WriteLine("RESULT = " + output);
             }
             return output;
-        }
-        static double Parabola(double x)
-        {
-            return x * x;
         }
         static double XiFunction(double r,double component)
         {
