@@ -8,6 +8,7 @@ namespace Reaction_orders
     internal class Program
     {
         static double k = 1.38*Math.Pow(10, -23);//Boltzman constant
+        static double K = Math.Pow(10, -10);
         static double T =15;//Temperature
         // static double M_a = 18;    //Molar mass
         //static double M_b = 18;    //Molar mass
@@ -29,6 +30,7 @@ namespace Reaction_orders
         static double[] M;//Molar masses
        // static double[] r;
         static double[] n;//Amounts
+        static double[] gamma;
         static double[] Q;
         static double[][] LJparameters;
         static double[][] sigmaMatrix;
@@ -54,13 +56,16 @@ namespace Reaction_orders
         static bool log = false;
         static StreamWriter log_writer;
         static StreamWriter isotherm_writer;
+        static StreamWriter chemicalPotential_writer;
 
         delegate double Function(double x);
         
         static void Main(string[] args)
         {
             log_writer = new StreamWriter(File.Create("log.txt"));
-            
+            chemicalPotential_writer = new StreamWriter(File.Create("chemical_potentia.txt"));
+
+
             Console.WriteLine("Initializing...");
             M = new double[numberOfComponents];
             //r = new double[numberOfComponents];
@@ -74,12 +79,14 @@ namespace Reaction_orders
             ////////////////////////////////////
             m = new double[numberOfComponents];
             N = new double[numberOfComponents];
+            gamma = new double[numberOfComponents];
             w = new double[numberOfComponents][];
             beta = new double[numberOfComponents][];
             molarFractions = new double[numberOfComponents];
             for (int i = 0; i < numberOfComponents; i++)
             {
                 M[i] = 0.03995;
+                gamma[i] = 1;
                // r[i] = Math.Pow(10, -9) * 0.14;
                 Q[i] = 1;
                 n[i] = 10000;
@@ -93,15 +100,24 @@ namespace Reaction_orders
             }
             n[0] = 34928.66083 / 2.0;
             n[1] = 34928.66083/2.0;
+            //n[2] = 0;
             //Argon
             //epsilon (J/molecule)
-             LJparameters[0][0] = 1.65517E-21;
+            LJparameters[0][0] = 1.65517E-21;
             LJparameters[1][0] = 1.75517E-21;
             //sigma (m)
             LJparameters[0][1] = 3.40984E-10;
             LJparameters[1][1] = 3.30984E-10;
             //Argom end
+            //LJ parameters
+            /*LJparameters[0][0] = 1.65517E-21;
+            LJparameters[1][0] = 1.65517E-21;
+            LJparameters[2][0] = 1.65517E-21;
 
+            LJparameters[0][1] = 3.40984E-10;
+            LJparameters[1][1] = 3.40984E-10;
+            LJparameters[2][1] = 3.40984E-10;*/
+            //LJ parameters
 
             //Ideal gas
             /* //epsilon (J/molecule)
@@ -129,6 +145,7 @@ namespace Reaction_orders
             //Console.WriteLine("Pressure: " + CalculatePressureAtCurrentConditions());
 
             log_writer.Close();
+            chemicalPotential_writer.Close();
             Console.WriteLine("Main is done");
          }
          static string isotherm_writer_line;
@@ -206,7 +223,12 @@ namespace Reaction_orders
                 Console.WriteLine("-----------------------NEW COMPOSITION-------------------------");
                 n[0] = n_sum * x0;
                 n[1] = n_sum * (1 - x0);
+               // n[2] = 0;
                 V = FindVolumeCorrespondingToParticularPressure(101325);
+               // UpdateEquilibriumComposition(n);
+              //  chemicalPotential_writer.WriteLine(gamma[0] + "    " + gamma[1] + "    " + gamma[2]);
+
+                
                 Console.WriteLine("V=" +V);
                 List<double> orders = CalculateReactionOrders();
                 Console.WriteLine("Absolute order A: " + orders[0]);
@@ -214,8 +236,40 @@ namespace Reaction_orders
                 Console.WriteLine("Absolute order B: " + orders[2]);
                 Console.WriteLine("Relative order B: " + orders[3]);
                 orderWriter.WriteLine(x0 + ";" + (1 - x0) + ";" + V + ";" + orders[0] + ";" + orders[1]+ ";" + orders[2] + ";" + orders[3]);
+                
             }
             orderWriter.Close();
+        }
+        static void UpdateEquilibriumComposition(double[] initial_n)
+        {
+            n[0] = initial_n[0];
+            n[1] = initial_n[1];
+            n[2] = K * n[0] * n[1]  *gamma[0] * gamma[1] / gamma[2];
+            CalculateActivityCoeffitientsForParticularComposition(n);
+            n[2] = K * n[0] * n[1] * gamma[0] * gamma[1] / gamma[2];
+            n[0] -= n[2];
+            n[1] -= n[2];
+        }
+        static void CalculateActivityCoeffitientsForParticularComposition(double[] composition)
+        {
+            double[] old_composition = new double[numberOfComponents];
+            for (int i = 0; i < numberOfComponents; i++)
+            {
+                old_composition[i] = n[i];
+                n[i] = composition[i];
+            }
+            double F = -k * T * Calculate_LnZ();    
+            for(int i = 0; i < numberOfComponents; i++)
+            {
+                //Calculating chemical potentials for each component
+                double dn = old_composition[i] * 0.01;
+                n[i] += dn;
+                double F2 = -k * T * Calculate_LnZ();
+                n[i] = old_composition[i];
+                double _gamma = (F2-F) / dn;
+                gamma[i] = _gamma;
+            }
+
         }
         /// <summary>
         /// Calculates all types of reaction orders for particular conditions
@@ -327,7 +381,11 @@ namespace Reaction_orders
             V = newV;
             for (int i = 0; i < amounts.Length; i++)
                 n[i] = amounts[i];
-            return CalculatePressureAtCurrentConditions();
+            double output = CalculatePressureAtCurrentConditions();
+            if (double.IsNaN(output))
+                V = V;
+            return output;
+
         } 
         static double ComponentPartialVolumeEquation(double[] args)
         {
@@ -336,6 +394,8 @@ namespace Reaction_orders
             double new_n0 = args[2];
             double new_n1 = args[3];
             double output = CalculatePressureForParticularVolumeAndAmounts(newV, new double[] { new_n0, new_n1 }) - targetPressure;
+            if (double.IsNaN(output))
+                output=output;
             return output;
         }
          static double CalculatePressureAtCurrentConditions()
@@ -464,8 +524,14 @@ namespace Reaction_orders
         {
             //if (a > 3.76 * Math.Pow(10, -10))
                 log = true;
-            double output = 4.0 * pi * Math.Exp(XiFunction(0.0, component) / (k * T));
-            output *= DefiniteIntegral(CalculateFreeCellVolume_SubintegrativeExpression, 0, 0.99*a,1,new List<double>() { component});
+            double xi = XiFunction(0.0, component);
+            double output = 4.0 * pi * Math.Exp(xi / (k * T));
+            
+            double volume =  DefiniteIntegral(CalculateFreeCellVolume_SubintegrativeExpression, 0, 0.99*a,1,new List<double>() { component});
+            if (double.IsNaN(volume))
+                output = output;
+            output *= volume;
+            
             if (log)
                 log = false;
             log_writer.WriteLine("-------------------------------------------------");
@@ -481,7 +547,10 @@ namespace Reaction_orders
         {
             double r = args[1];
             double component = args[0];
-            double output = r * r * Math.Exp(-XiFunction(r, component) / (k * T));
+            double xi =  XiFunction(r, component);
+            double output = r * r * Math.Exp(-xi/ (k * T));
+            if (double.IsNaN(output))
+                output = output;
             return output;
         }
         static void UpdateParameters()
@@ -606,6 +675,8 @@ namespace Reaction_orders
             {
                 //Console.WriteLine("RESULT = " + output);
             }
+            if (double.IsNaN(output))
+                output = output;
             return output;
         }
         static double XiFunction(double r,double component)
