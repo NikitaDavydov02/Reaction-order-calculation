@@ -19,7 +19,7 @@ namespace Reaction_orders
         //static double n_b = 10000;
         //static double E0 = 40000;//J/mol
         static double E0 = 400;//J/mol
-        static double V = 1;//Volume
+        static double V = 0;//Volume
         //static double Q_a = 1;
         //static double Q_b = 1;
         static double h= 6.62 * Math.Pow(10, -34);
@@ -31,6 +31,8 @@ namespace Reaction_orders
        // static double[] r;
         static double[] n;//Amounts
         static double[] gamma;
+        static double[] chemPot;
+        static double[] standartChemPot;
         static double[] Q;
         static double[][] LJparameters;
         static double[][] sigmaMatrix;
@@ -39,7 +41,7 @@ namespace Reaction_orders
         static double[][] beta;
         static double[][] noncorelatedPairsNumber;
         static double[][] corelatedPairsNumber;
-        static int numberOfComponents = 2;
+        static int numberOfComponents = 3;
         //Calculate parameters
         static double[] m;
         static double[] N;
@@ -80,6 +82,8 @@ namespace Reaction_orders
             m = new double[numberOfComponents];
             N = new double[numberOfComponents];
             gamma = new double[numberOfComponents];
+            chemPot = new double[numberOfComponents];
+            standartChemPot = new double[numberOfComponents];
             w = new double[numberOfComponents][];
             beta = new double[numberOfComponents][];
             molarFractions = new double[numberOfComponents];
@@ -98,9 +102,6 @@ namespace Reaction_orders
                 w[i] = new double[numberOfComponents];
                 beta[i] = new double[numberOfComponents];
             }
-            n[0] = 34928.66083 / 2.0;
-            n[1] = 34928.66083/2.0;
-            //n[2] = 0;
             //Argon
             //epsilon (J/molecule)
             LJparameters[0][0] = 1.65517E-21;
@@ -110,13 +111,13 @@ namespace Reaction_orders
             LJparameters[1][1] = 3.30984E-10;
             //Argom end
             //LJ parameters
-            /*LJparameters[0][0] = 1.65517E-21;
+            LJparameters[0][0] = 1.65517E-21;
             LJparameters[1][0] = 1.65517E-21;
             LJparameters[2][0] = 1.65517E-21;
 
             LJparameters[0][1] = 3.40984E-10;
             LJparameters[1][1] = 3.40984E-10;
-            LJparameters[2][1] = 3.40984E-10;*/
+            LJparameters[2][1] = 3.40984E-10;
             //LJ parameters
 
             //Ideal gas
@@ -140,7 +141,35 @@ namespace Reaction_orders
 
             //CalculateReactionOrders();
 
-            ReactionOrdersForDifferntCompositions(20);
+            //Calculating standart chemical potentials
+            for(int i = 0; i < numberOfComponents; i++)
+            {
+                for (int j = 0; j < numberOfComponents; j++)
+                    n[j] = 1;
+                if (i == 1)
+                    i = 1;
+                n[i] = 35000;
+                UpdateParameters();
+                V = FindVolumeCorrespondingToParticularPressure(101325);
+                UpdateParameters();
+                double p = CalculatePressureAtCurrentConditions();
+                UpdateParameters();
+                double F = -k * T * Calculate_LnZ();
+                n[i] = 36000;
+                UpdateParameters();
+                double F2 = -k * T * Calculate_LnZ();
+                standartChemPot[i] = (F2 - F) / 1000;
+                gamma[i] = 1;
+            }
+
+            //n[0] = 34928.66083 / 2.0;
+            //n[1] = 34928.66083 / 2.0;
+            n[0] = 35000 / 2.0;
+            n[1] = 35000 / 2.0;
+            n[2] = 0;
+            UpdateParameters();
+
+            ReactionOrdersForDifferntCompositions(10);
 
             //Console.WriteLine("Pressure: " + CalculatePressureAtCurrentConditions());
 
@@ -155,9 +184,17 @@ namespace Reaction_orders
             /// <param name="targetPressure"></param>
             /// <param name="Vaccuracy"></param>
             /// <returns></returns>
-         static double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy=0.001)
+         static double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy=0.00001)
          {
-            return BisectionSolve(ComponentPartialVolumeEquation, Vaccuracy, 0.1, 50, 1, new List<double>() { targetPressure, n[0], n[1] });
+            double Vmin = 2;
+            double Vmax = 5;
+            if (V != 0)
+            {
+                Vmin = 0.1;
+                Vmax = 2 * V;
+            }
+                
+            return BisectionSolve(ComponentPartialVolumeEquation, Vaccuracy, Vmin,Vmax, 1, new List<double>() { targetPressure, n[0], n[1], n[2] });
             ////////////////////OLD ALGORITHM//////////////////////////////////////////////////
             double Vstep;
              if (Vaccuracy== -1)
@@ -218,25 +255,28 @@ namespace Reaction_orders
             StreamWriter orderWriter = new StreamWriter("orders.csv");
             orderWriter.WriteLine("x0;x1;V;absolute;relative");
             double xStep = 1 / (double)steps;
-            for(double x0 = 0.01; x0 < 1; x0 += xStep)
+            for(double x0 = 0.00001; x0 < 1; x0 += xStep)
             {
                 Console.WriteLine("-----------------------NEW COMPOSITION-------------------------");
                 n[0] = n_sum * x0;
                 n[1] = n_sum * (1 - x0);
-               // n[2] = 0;
+                n[2] = 0;
                 V = FindVolumeCorrespondingToParticularPressure(101325);
-               // UpdateEquilibriumComposition(n);
-              //  chemicalPotential_writer.WriteLine(gamma[0] + "    " + gamma[1] + "    " + gamma[2]);
+                UpdateParameters();
+                double p = CalculatePressureAtCurrentConditions();
+                UpdateEquilibriumComposition(n);
+                chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+                Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
 
-                
-                Console.WriteLine("V=" +V);
+
+                /*Console.WriteLine("V=" +V);
                 List<double> orders = CalculateReactionOrders();
                 Console.WriteLine("Absolute order A: " + orders[0]);
                 Console.WriteLine("Relative order A: " + orders[1]);
                 Console.WriteLine("Absolute order B: " + orders[2]);
                 Console.WriteLine("Relative order B: " + orders[3]);
                 orderWriter.WriteLine(x0 + ";" + (1 - x0) + ";" + V + ";" + orders[0] + ";" + orders[1]+ ";" + orders[2] + ";" + orders[3]);
-                
+                */
             }
             orderWriter.Close();
         }
@@ -245,6 +285,7 @@ namespace Reaction_orders
             n[0] = initial_n[0];
             n[1] = initial_n[1];
             n[2] = K * n[0] * n[1]  *gamma[0] * gamma[1] / gamma[2];
+            n[2] = 1;
             CalculateActivityCoeffitientsForParticularComposition(n);
             n[2] = K * n[0] * n[1] * gamma[0] * gamma[1] / gamma[2];
             n[0] -= n[2];
@@ -258,17 +299,25 @@ namespace Reaction_orders
                 old_composition[i] = n[i];
                 n[i] = composition[i];
             }
+            UpdateParameters();
             double F = -k * T * Calculate_LnZ();    
             for(int i = 0; i < numberOfComponents; i++)
             {
+                if (i == 1)
+                    i = 1;
                 //Calculating chemical potentials for each component
-                double dn = old_composition[i] * 0.01;
+                //double dn = old_composition[i] * 0.01;
+                double dn = 1000;
                 n[i] += dn;
+                UpdateParameters();
                 double F2 = -k * T * Calculate_LnZ();
                 n[i] = old_composition[i];
-                double _gamma = (F2-F) / dn;
-                gamma[i] = _gamma;
+                double cpt = (F2-F) / dn;
+                chemPot[i] = cpt;
+                double activity =Math.Exp((chemPot[i] - standartChemPot[i]) / (R * T));
+                gamma[i] = activity / molarFractions[i];
             }
+            UpdateParameters();
 
         }
         /// <summary>
@@ -297,7 +346,7 @@ namespace Reaction_orders
 
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, init_n1 - 10 * delta_n0, init_n1 + 10 * delta_n0, 3, new List<double>() { initialPressure, V, n[0] });
+            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, init_n1 - 10 * delta_n0, init_n1 + 10 * delta_n0, 3, new List<double>() { initialPressure, V, n[0], n[2] });
             n[1] = target_n1;
             double rateAfterIsobaricAddition = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition: " + rateAfterIsobaricAddition);
@@ -319,7 +368,7 @@ namespace Reaction_orders
 
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, init_n0 - 10 * delta_n1, init_n0 + 10 * delta_n1, 2, new List<double>() { initialPressure, V, n[1] });
+            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, init_n0 - 10 * delta_n1, init_n0 + 10 * delta_n1, 2, new List<double>() { initialPressure, V, n[1], n[2] });
             n[0] = target_n0;
             double rateAfterIsobaricAdditionB = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition of B: " + rateAfterIsobaricAdditionB);
@@ -379,7 +428,7 @@ namespace Reaction_orders
         static double CalculatePressureForParticularVolumeAndAmounts(double newV, double[] amounts)
         {
             V = newV;
-            for (int i = 0; i < amounts.Length; i++)
+            for (int i = 0; i < numberOfComponents; i++)
                 n[i] = amounts[i];
             double output = CalculatePressureAtCurrentConditions();
             if (double.IsNaN(output))
@@ -393,7 +442,8 @@ namespace Reaction_orders
             double newV = args[1];
             double new_n0 = args[2];
             double new_n1 = args[3];
-            double output = CalculatePressureForParticularVolumeAndAmounts(newV, new double[] { new_n0, new_n1 }) - targetPressure;
+            double new_n2 = args[4];
+            double output = CalculatePressureForParticularVolumeAndAmounts(newV, new double[] { new_n0, new_n1,new_n2 }) - targetPressure;
             if (double.IsNaN(output))
                 output=output;
             return output;
@@ -498,7 +548,8 @@ namespace Reaction_orders
             double output = StirlingFormila(Nsum);
             for(int i = 0; i < numberOfComponents; i++)
             {
-                output -= StirlingFormila(N[i]);
+                if (N[i]!=0)
+                    output -= StirlingFormila(N[i]);
             }
             output += StirlingFormila(z * (N[0] - noncorelatedPairsNumber[0][1]) / 2.0);
             output += StirlingFormila(z * (N[1] - noncorelatedPairsNumber[0][1]) / 2.0);
