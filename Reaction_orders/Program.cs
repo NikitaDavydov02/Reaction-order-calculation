@@ -120,6 +120,16 @@ namespace Reaction_orders
             LJparameters[2][1] = 3.40984E-10;
             //LJ parameters
 
+            //LJ parameters
+            LJparameters[0][0] = 1.65517E-21;
+            LJparameters[1][0] = 1.65517E-21;
+            LJparameters[2][0] = 1.65517E-21;
+
+            LJparameters[0][1] = 0;
+            LJparameters[1][1] = 0;
+            LJparameters[2][1] = 0;
+            //LJ parameters
+
             //Ideal gas
             /* //epsilon (J/molecule)
              LJparameters[0][0] = 0;
@@ -142,7 +152,7 @@ namespace Reaction_orders
             //CalculateReactionOrders();
 
             //Calculating standart chemical potentials
-            for(int i = 0; i < numberOfComponents; i++)
+            for (int i = 0; i < numberOfComponents; i++)
             {
                 for (int j = 0; j < numberOfComponents; j++)
                     n[j] = 1;
@@ -167,6 +177,10 @@ namespace Reaction_orders
             n[0] = 35000 / 2.0;
             n[1] = 35000 / 2.0;
             n[2] = 0;
+           /* standartChemPot[0] = -2383.73086958992;
+            standartChemPot[1] = -2383.69605476199;
+            standartChemPot[2] = -2383.72845056693;*/
+
             UpdateParameters();
 
             ReactionOrdersForDifferntCompositions(10);
@@ -264,19 +278,20 @@ namespace Reaction_orders
                 V = FindVolumeCorrespondingToParticularPressure(101325);
                 UpdateParameters();
                 double p = CalculatePressureAtCurrentConditions();
-                UpdateEquilibriumComposition(n);
-                chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
-                Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+                //UpdateEquilibriumComposition(n);
+                //chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+                //Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
 
 
-                /*Console.WriteLine("V=" +V);
-                List<double> orders = CalculateReactionOrders();
+                Console.WriteLine("V=" +V);
+                Console.WriteLine("p=" + p);
+                List<double> orders = CalculateReactionOrders(n_sum * x0, n_sum * (1 - x0));
                 Console.WriteLine("Absolute order A: " + orders[0]);
                 Console.WriteLine("Relative order A: " + orders[1]);
                 Console.WriteLine("Absolute order B: " + orders[2]);
                 Console.WriteLine("Relative order B: " + orders[3]);
                 orderWriter.WriteLine(x0 + ";" + (1 - x0) + ";" + V + ";" + orders[0] + ";" + orders[1]+ ";" + orders[2] + ";" + orders[3]);
-                */
+                
             }
             orderWriter.Close();
         }
@@ -285,11 +300,11 @@ namespace Reaction_orders
             n[0] = initial_n[0];
             n[1] = initial_n[1];
             n[2] = K * n[0] * n[1]  *gamma[0] * gamma[1] / gamma[2];
-            n[2] = 1;
             CalculateActivityCoeffitientsForParticularComposition(n);
             n[2] = K * n[0] * n[1] * gamma[0] * gamma[1] / gamma[2];
             n[0] -= n[2];
             n[1] -= n[2];
+            UpdateParameters();
         }
         static void CalculateActivityCoeffitientsForParticularComposition(double[] composition)
         {
@@ -312,6 +327,7 @@ namespace Reaction_orders
                 UpdateParameters();
                 double F2 = -k * T * Calculate_LnZ();
                 n[i] = old_composition[i];
+                UpdateParameters();
                 double cpt = (F2-F) / dn;
                 chemPot[i] = cpt;
                 double activity =Math.Exp((chemPot[i] - standartChemPot[i]) / (R * T));
@@ -324,59 +340,106 @@ namespace Reaction_orders
         /// Calculates all types of reaction orders for particular conditions
         /// </summary>
         /// <returns></returns>
-         static List<double> CalculateReactionOrders()
+         static List<double> CalculateReactionOrders(double n0, double n1)
          {
             List<double> output = new List<double>();
+            double[] initial_composition = new double[3];
+            initial_composition[0] = n0;
+            initial_composition[1] = n1;
+            initial_composition[2] = 0;
+
+            double[] loading = new double[3];
+            loading[0] = n0;
+            loading[1] = n1;
+            loading[2] = 0;
+
+
+            UpdateEquilibriumComposition(initial_composition);
+            chemicalPotential_writer.WriteLine(molarFractions[0] + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+            Console.WriteLine(molarFractions[0] + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+
+            /*double[] equilibriumComposition = new double[3];
+            equilibriumComposition[0] = n[0];
+            equilibriumComposition[1] = n[1];
+            equilibriumComposition[2] = n[2];*/
             double initialRate = CalculateCurrentReactionRate();
             double initialPressure = CalculatePressureAtCurrentConditions();
             Console.WriteLine("Initial pressure: " + initialPressure);
             Console.WriteLine("Initial reaction rate:" + initialRate);
             double initV = V;
-            double init_n0 = n[0];
+
+
+
+            /*double init_n0 = n[0];
             double init_n1 = n[1];
+            double init_n2 = n[2];*/
 
             //Absolute reaction order calculation
-            n[0] *= 1.01;
+            loading[0] *= 1.01;
+            UpdateEquilibriumComposition(loading);
             double newPressure = CalculatePressureAtCurrentConditions();
-            double delta_n0 = n[0] - init_n0;
+            double delta_n0 = loading[0] - initial_composition[0];
             double rateAfterNonIsobaricAddition = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after non-isobaric addition:" + rateAfterNonIsobaricAddition);
-            double absoluteOrder = (Math.Log(rateAfterNonIsobaricAddition)-Math.Log(initialRate))/ (Math.Log(n[0]/V)- Math.Log(init_n0 / V));
+            double absoluteOrder = (Math.Log(rateAfterNonIsobaricAddition)-Math.Log(initialRate))/ (Math.Log(loading[0]/V)- Math.Log(initial_composition[0] / V));
             Console.WriteLine("Absolute order of A: " + absoluteOrder);
+            Console.WriteLine("Non-isobaric pressure for A: " + newPressure);
 
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, init_n1 - 10 * delta_n0, init_n1 + 10 * delta_n0, 3, new List<double>() { initialPressure, V, n[0], n[2] });
+            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, loading[1] - 10 * delta_n0, loading[1] + 10 * delta_n0, 3, new List<double>() { initialPressure, V, n[0], n[2] });
             n[1] = target_n1;
+            loading[0] = n[0] + n[2];
+            loading[1] = n[1] + n[2];
+            loading[2] =0;
+            UpdateEquilibriumComposition(loading);
+            double pressureForRelativeOrderOfA = CalculatePressureAtCurrentConditions();
             double rateAfterIsobaricAddition = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition: " + rateAfterIsobaricAddition);
-            double relativeOrder = (Math.Log(rateAfterIsobaricAddition) - Math.Log(initialRate)) / (Math.Log(n[0] / V) - Math.Log(init_n0 / V));
+            double relativeOrder = (Math.Log(rateAfterIsobaricAddition) - Math.Log(initialRate)) / (Math.Log(loading[0] / V) - Math.Log(initial_composition[0] / V));
             Console.WriteLine("Relative order of A: " + relativeOrder);
+            Console.WriteLine("Pressure for Relative order of A: " + pressureForRelativeOrderOfA);
 
-            n[0] = init_n0;
-            n[1] = init_n1;
+            n[0] = initial_composition[0];
+            n[1] = initial_composition[1];
+            n[2] = 0;
+            loading[0] = initial_composition[0];
+            loading[1] = initial_composition[1];
+            loading[2] = 0;
             V = initV;
-
+            ///////////////////////////////////////
+            //////////////////////////////////////
+            ///////////////////////////////////////
+            ///////////////////////////////////////
             //Absolute reaction order calculation
-            n[1] *= 1.01;
+            loading[1] *= 1.01;
+            UpdateEquilibriumComposition(loading);
             double newPressure1 = CalculatePressureAtCurrentConditions();
-            double delta_n1 = n[1] - init_n1;
+            double delta_n1 = loading[1] - initial_composition[1];
             double rateAfterNonIsobaricAdditionOfB = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after non-isobaric addition:" + rateAfterNonIsobaricAdditionOfB);
-            double absoluteOrderB = (Math.Log(rateAfterNonIsobaricAdditionOfB) - Math.Log(initialRate)) / (Math.Log(n[1] / V) - Math.Log(init_n1 / V));
+            double absoluteOrderB = (Math.Log(rateAfterNonIsobaricAdditionOfB) - Math.Log(initialRate)) / (Math.Log(loading[1] / V) - Math.Log(initial_composition[1] / V));
             Console.WriteLine("Absolute order of B: " + absoluteOrderB);
+            Console.WriteLine("Non-isobaric pressure for B: " + newPressure1);
 
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, init_n0 - 10 * delta_n1, init_n0 + 10 * delta_n1, 2, new List<double>() { initialPressure, V, n[1], n[2] });
+            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, initial_composition[0] - 10 * delta_n1, initial_composition[0] + 10 * delta_n1, 2, new List<double>() { initialPressure, V, n[1], n[2] });
             n[0] = target_n0;
+            loading[0] = n[0] + n[2];
+            loading[1] = n[1] + n[2];
+            loading[2] = 0;
+            UpdateEquilibriumComposition(loading);
+            double pressureForRelativeOrderOfB = CalculatePressureAtCurrentConditions();
             double rateAfterIsobaricAdditionB = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition of B: " + rateAfterIsobaricAdditionB);
-            double relativeOrderofB = (Math.Log(rateAfterIsobaricAdditionB) - Math.Log(initialRate)) / (Math.Log(n[1] / V) - Math.Log(init_n1 / V));
+            double relativeOrderofB = (Math.Log(rateAfterIsobaricAdditionB) - Math.Log(initialRate)) / (Math.Log(loading[1] / V) - Math.Log(initial_composition[1] / V));
             Console.WriteLine("Relative order of A: " + relativeOrderofB);
+            Console.WriteLine("Pressure for Relative order of A: " + pressureForRelativeOrderOfB);
 
-            n[0] = init_n0;
-            n[1] = init_n1;
+            n[0] = initial_composition[0];
+            n[1] = initial_composition[1];
+            n[2] = 0;
             V = initV;
 
             output.Add(absoluteOrder);
@@ -388,9 +451,10 @@ namespace Reaction_orders
          static double CalculateCurrentReactionRate()
          {
              UpdateParameters();
-             double reducedMass = (M[0] * M[1] / (M[0] + M[1]));
-             double sqrt = Math.Sqrt(8 * R * T / reducedMass);
-             double reactionRate = sqrt * sigmaMatrix[0][1] * sigmaMatrix[0][1] * (N[0]/V) * (N[1]/V) * (2 / (1 + beta[0][1])) * Math.Exp(-E0 / (R * T));
+             double reactionRate = (k * T / h) * K * gamma[0] * gamma[1] * (N[0] / V) * (N[1] / V) / gamma[2];
+            // double reducedMass = (M[0] * M[1] / (M[0] + M[1]));
+             //double sqrt = Math.Sqrt(8 * R * T / reducedMass);
+             //double reactionRate = sqrt * sigmaMatrix[0][1] * sigmaMatrix[0][1] * (N[0]/V) * (N[1]/V) * (2 / (1 + beta[0][1])) * Math.Exp(-E0 / (R * T));
              //[1/(s*m3)]
              return reactionRate;
          }
