@@ -272,8 +272,8 @@ namespace Reaction_orders
         {
             StreamWriter orderWriter = new StreamWriter("orders.csv");
             orderWriter.WriteLine("x0;x1;V;absolute;relative");
-            double xStep = 1 / (double)steps;
-            for(double x0 = 0.00001; x0 < 1; x0 += xStep)
+            double xStep = 0.98 / (double)steps;
+            for(double x0 = 0.01; x0 < 1; x0 += xStep)
             {
                 Console.WriteLine("-----------------------NEW COMPOSITION-------------------------");
                 n[0] = n_sum * x0;
@@ -282,9 +282,9 @@ namespace Reaction_orders
                 V = FindVolumeCorrespondingToParticularPressure(101325);
                 UpdateParameters();
                 double p = CalculatePressureAtCurrentConditions();
-               // UpdateEquilibriumComposition(n);
+               // UpdateEquilibriumComposition(n,chemPotForInitialPressure);
                // chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
-               // Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+               //  Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
 
 
                 Console.WriteLine("V=" +V);
