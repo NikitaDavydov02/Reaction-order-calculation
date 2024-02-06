@@ -397,10 +397,14 @@ namespace Reaction_orders
             double absoluteOrder = (Math.Log(rateAfterNonIsobaricAddition)-Math.Log(initialRate))/ (Math.Log(loading[0]/V)- Math.Log(initial_composition[0] / V));
             Console.WriteLine("Absolute order of A: " + absoluteOrder);
             Console.WriteLine("Non-isobaric pressure for A: " + newPressure);
-            
+
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, loading[1] - 10 * delta_n0, loading[1] + 10 * delta_n0, 3, new List<double>() { initialPressure, V, n[0], n[2] });
+            double min = loading[1] - 10 * delta_n0;
+            double max = loading[1] + 10 * delta_n0;
+            if (min < 0)
+                min = 0.0001 * loading[1];
+            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, min, max, 3, new List<double>() { initialPressure, V, n[0], n[2] });
             n[1] = target_n1;
             loading[0] = n[0] + n[2];
             loading[1] = n[1] + n[2];
@@ -409,7 +413,7 @@ namespace Reaction_orders
                 n[i] = loading[i];
             double pressureForRelativeOrderOfA = CalculatePressureAtCurrentConditions();
 
-            UpdateEquilibriumComposition(loading, chemPotForInitialPressure);
+            UpdateEquilibriumComposition(n, chemPotForInitialPressure);
             
             double rateAfterIsobaricAddition = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition: " + rateAfterIsobaricAddition);
@@ -447,7 +451,11 @@ namespace Reaction_orders
 
             //Relative order calculation
             //n[0] = init_n0;
-            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, initial_composition[0] - 10 * delta_n1, initial_composition[0] + 10 * delta_n1, 2, new List<double>() { initialPressure, V, n[1], n[2] });
+            min = initial_composition[0] - 10 * delta_n1;
+            max = initial_composition[0] + 10 * delta_n1;
+            if (min < 0)
+                min = 0.0001* initial_composition[0];
+            double target_n0 = BisectionSolve(ComponentPartialVolumeEquation, delta_n1 * 0.01, min,max, 2, new List<double>() { initialPressure, V, n[1], n[2] });
             n[0] = target_n0;
             loading[0] = n[0] + n[2];
             loading[1] = n[1] + n[2];
