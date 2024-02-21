@@ -113,11 +113,8 @@ namespace Reaction_orders
             LJparameters[1][1] = 3.30984E-10;
             //Argom end
             //LJ parameters
-            LJparameters[0][0] = 1.65517E-21;
-            LJparameters[1][0] = 1.65517E-21;
-            LJparameters[2][0] = 1.65517E-21;
 
-            LJparameters[0][1] = 3.40984E-10;
+            /*LJparameters[0][1] = 3.40984E-10;
             LJparameters[1][1] = 3.40984E-10;
             LJparameters[2][1] = 3.40984E-10;
             //LJ parameters
@@ -125,20 +122,30 @@ namespace Reaction_orders
             //LJ parameters
             LJparameters[0][0] = 1.65517E-21;
             LJparameters[1][0] = 1.65517E-21;
-            LJparameters[2][0] = 1.65517E-21;
+            LJparameters[2][0] = 1.65517E-21;*/
 
-            LJparameters[0][1] = 0;
+            LJparameters[0][1] = 3.40984E-10;
+            LJparameters[1][1] = 3.40984E-10;
+            LJparameters[2][1] = 3.40984E-10;
+            //LJ parameters
+
+            //LJ parameters
+            LJparameters[0][0] = 0;
+            LJparameters[1][0] = 0;
+            LJparameters[2][0] = 0;
+
+            /*LJparameters[0][1] = 0;
             LJparameters[1][1] = 0;
-            LJparameters[2][1] = 0;
+            LJparameters[2][1] = 0;*/
             //LJ parameters
 
             //Ideal gas
-            /* //epsilon (J/molecule)
-             LJparameters[0][0] = 0;
-             LJparameters[1][0] = 0;
-             //sigma (m)
-             LJparameters[0][1] = 3.40984E-10;
-             LJparameters[1][1] = 3.40984E-10;*/
+            //epsilon (J/molecule)
+            /*LJparameters[0][0] = 0;
+            LJparameters[1][0] = 0;
+            //sigma (m)
+            LJparameters[0][1] = 3.40984E-10;
+            LJparameters[1][1] = 3.40984E-10;*/
 
 
             //Isotherm(true);
@@ -807,7 +814,7 @@ namespace Reaction_orders
             OutputMatix("Epsilon matrix", epsilonMatrix, numberOfComponents);
             OutputMatix("W matrix", w, numberOfComponents);
             OutputMatix("Beta matrix", beta, numberOfComponents);
-            GrapXiFromR();
+           // GrapXiFromR();
         }
         static void OutputMatix(string name, double[][] matrix, int n)
         {
