@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Reaction_orders
+﻿namespace Reaction_orders
 {
     public class ReactionSystem
     {
@@ -125,9 +118,11 @@ namespace Reaction_orders
         }
         public void SetComponentAmounts(double[] newAmountsMol)
         {
+
             Nsum = 0;
             for (int i = 0; i < numberOfComponents; i++)
             {
+                n[i] = newAmountsMol[i];
                 N[i] = n[i] * Nav;
                 Nsum += N[i];
                 m[i] = M[i] / Nav;
@@ -327,37 +322,51 @@ namespace Reaction_orders
         private void CalculateStandartChemicalPotentials()
         {
             double pressure = GetPressure();
+            double[] initialСomposition = new double[numberOfComponents];
+            for (int j = 0; j < numberOfComponents; j++)
+                initialСomposition[j] = n[j];
             for (int i = 0; i < numberOfComponents; i++)
             {
                 double[] cleanCompositions=new double[numberOfComponents];
                 for (int j = 0; j < numberOfComponents; j++)
                     cleanCompositions[j] = 0;
                 cleanCompositions[i] = 35000;
+
                 double dn = cleanCompositions[i] * 0.01;
                 double initial_n = cleanCompositions[i];
 
                 cleanCompositions[i] = initial_n - 2 * dn;
-                ReactionSystem system = new ReactionSystem(P,cleanCompositions,T);
-                double F0 = system.Get_F();
+                SetComponentAmounts(cleanCompositions);
+                SetPressure(pressure,FreedomDegree.Volume);
+                double F0 = Get_F();
 
                 cleanCompositions[i] = initial_n - dn;
-                system = new ReactionSystem(P, cleanCompositions, T);
-                double F1 = system.Get_F();
+                SetComponentAmounts(cleanCompositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F1 = Get_F();
 
                 cleanCompositions[i] = initial_n + dn;
-                system = new ReactionSystem(P, cleanCompositions, T);
-                double F2 = system.Get_F();
+                SetComponentAmounts(cleanCompositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F2 =  Get_F();
 
                 cleanCompositions[i] = initial_n + 2 * dn;
-                system = new ReactionSystem(P, cleanCompositions, T);
-                double F3 = system.Get_F();
+                SetComponentAmounts(cleanCompositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F3 = Get_F();
 
                 standartChemPot[i] = (8*F2-8*F1+F0-F3) /(12*dn);
             }
+            SetComponentAmounts(initialСomposition);
+            SetPressure(pressure, FreedomDegree.Volume);
         }
         private void CalculateChemicalPotentials()
         {
             double pressure = GetPressure();
+            double[] initialСomposition = new double[numberOfComponents];
+            for (int j = 0; j < numberOfComponents; j++)
+                initialСomposition[j] = n[j];
+
             for (int i = 0; i < numberOfComponents; i++)
             {
                 if (n[i] == 0)
@@ -365,30 +374,37 @@ namespace Reaction_orders
                     chemPot[i] = 0;
                     continue;
                 }
+
                 double[] compositions = new double[numberOfComponents];
                 for (int j = 0; j < numberOfComponents; j++)
-                    compositions[j] = n[j];
+                    compositions[j] = initialСomposition[j];
                 double dn = compositions[i] * 0.01;
                 double initial_n = compositions[i];
 
                 compositions[i] = initial_n - 2 * dn;
-                ReactionSystem system = new ReactionSystem(pressure, compositions, T);
-                double F0 = system.Get_F();
+                SetComponentAmounts(compositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F0 = Get_F();
 
                 compositions[i] = initial_n - dn;
-                system = new ReactionSystem(pressure, compositions, T);
-                double F1 = system.Get_F();
+                SetComponentAmounts(compositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F1 = Get_F();
 
                 compositions[i] = initial_n + dn;
-                system = new ReactionSystem(pressure, compositions, T);
-                double F2 = system.Get_F();
+                SetComponentAmounts(compositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F2 = Get_F();
 
                 compositions[i] = initial_n + 2 * dn;
-                system = new ReactionSystem(pressure, compositions, T);
-                double F3 = system.Get_F();
+                SetComponentAmounts(compositions);
+                SetPressure(pressure, FreedomDegree.Volume);
+                double F3 = Get_F();
 
                 chemPot[i] = (8 * F2 - 8 * F1 + F0 - F3) / (12 * dn);
             }
+            SetComponentAmounts(initialСomposition);
+            SetPressure(pressure, FreedomDegree.Volume);
         }
         private double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy = 0.0000001)
         {

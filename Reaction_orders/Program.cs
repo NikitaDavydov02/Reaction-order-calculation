@@ -108,7 +108,7 @@ namespace Reaction_orders
             initial_composition[1] = n1;
             initial_composition[2] = 0;
 
-            ReactionSystem system = new ReactionSystem(P, T, initial_composition);
+            ReactionSystem system = new ReactionSystem(P,initial_composition,T);
             double initialRate = system.CalculateCurrentReactionRate();
             double initialPressure = system.GetPressure();
             Console.WriteLine("Initial pressure: " + initialPressure);
