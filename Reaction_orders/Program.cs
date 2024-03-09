@@ -114,7 +114,7 @@ namespace Reaction_orders
             //Argom end
             //LJ parameters
 
-            /*LJparameters[0][1] = 3.40984E-10;
+            LJparameters[0][1] = 3.40984E-10;
             LJparameters[1][1] = 3.40984E-10;
             LJparameters[2][1] = 3.40984E-10;
             //LJ parameters
@@ -122,11 +122,11 @@ namespace Reaction_orders
             //LJ parameters
             LJparameters[0][0] = 1.65517E-21;
             LJparameters[1][0] = 1.65517E-21;
-            LJparameters[2][0] = 1.65517E-21;*/
-
-            LJparameters[0][1] = 3.40984E-10;
-            LJparameters[1][1] = 3.40984E-10;
-            LJparameters[2][1] = 3.40984E-10;
+            LJparameters[2][0] = 1.65517E-21;
+            /////////////////////////////////
+            LJparameters[0][1] = 0;
+            LJparameters[1][1] = 0;
+            LJparameters[2][1] = 0;
             //LJ parameters
 
             //LJ parameters
@@ -208,7 +208,7 @@ namespace Reaction_orders
             /// <param name="targetPressure"></param>
             /// <param name="Vaccuracy"></param>
             /// <returns></returns>
-         static double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy=0.00001)
+         static double FindVolumeCorrespondingToParticularPressure(double targetPressure, double Vaccuracy=0.0000001)
          {
             double Vmin = 1;
             double Vmax = 100;
@@ -290,7 +290,7 @@ namespace Reaction_orders
                 UpdateParameters();
                 double p = CalculatePressureAtCurrentConditions();
                // UpdateEquilibriumComposition(n,chemPotForInitialPressure);
-               // chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
+                //chemicalPotential_writer.WriteLine(x0+"     "+ gamma[0] + "    " + gamma[1] + "    " + gamma[2]+"    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
                //  Console.WriteLine(x0 + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
 
 
@@ -301,7 +301,7 @@ namespace Reaction_orders
                 Console.WriteLine("Relative order A: " + orders[1]);
                 Console.WriteLine("Absolute order B: " + orders[2]);
                 Console.WriteLine("Relative order B: " + orders[3]);
-                orderWriter.WriteLine(x0 + ";" + (1 - x0) + ";" + V + ";" + orders[0] + ";" + orders[1]+ ";" + orders[2] + ";" + orders[3]);
+                orderWriter.WriteLine(x0 + ";" + (1 - x0) + ";" + V + ";" + orders[0] + ";" + orders[1]+ ";" + orders[2] + ";" + orders[3] + ";");
                 
             }
             orderWriter.Close();
@@ -368,7 +368,7 @@ namespace Reaction_orders
 
             
             UpdateEquilibriumComposition(initial_composition,chemPotForInitialPressure);
-            chemicalPotential_writer.WriteLine(molarFractions[0] + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+            Console.WriteLine(molarFractions[0]  +  " Initial:     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
             Console.WriteLine(molarFractions[0] + "     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    "+V);
 
             /*double[] equilibriumComposition = new double[3];
@@ -400,6 +400,8 @@ namespace Reaction_orders
             
             double delta_n0 = loading[0] - initial_composition[0];
             double rateAfterNonIsobaricAddition = CalculateCurrentReactionRate();
+            Console.WriteLine(molarFractions[0] + " after non-isobaric addition of A:     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+
             Console.WriteLine("Reaction rate after non-isobaric addition:" + rateAfterNonIsobaricAddition);
             double absoluteOrder = (Math.Log(rateAfterNonIsobaricAddition)-Math.Log(initialRate))/ (Math.Log(loading[0]/V)- Math.Log(initial_composition[0] / V));
             Console.WriteLine("Absolute order of A: " + absoluteOrder);
@@ -411,7 +413,7 @@ namespace Reaction_orders
             double max = loading[1] + 10 * delta_n0;
             if (min < 0)
                 min = 0.0001 * loading[1];
-            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.01, min, max, 3, new List<double>() { initialPressure, V, n[0], n[2] });
+            double target_n1 = BisectionSolve(ComponentPartialVolumeEquation, delta_n0 * 0.0001, min, max, 3, new List<double>() { initialPressure, V, n[0], n[2] });
             n[1] = target_n1;
             loading[0] = n[0] + n[2];
             loading[1] = n[1] + n[2];
@@ -421,7 +423,8 @@ namespace Reaction_orders
             double pressureForRelativeOrderOfA = CalculatePressureAtCurrentConditions();
 
             UpdateEquilibriumComposition(n, chemPotForInitialPressure);
-            
+            Console.WriteLine(molarFractions[0] + " after isobaric addition of A:     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+
             double rateAfterIsobaricAddition = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition: " + rateAfterIsobaricAddition);
             double relativeOrder = (Math.Log(rateAfterIsobaricAddition) - Math.Log(initialRate)) / (Math.Log(loading[0] / V) - Math.Log(initial_composition[0] / V));
@@ -447,8 +450,9 @@ namespace Reaction_orders
             for (int i = 0; i < numberOfComponents; i++)
                 standartChemPotForNewPressure[i] = CalculateStanartChemicalPotential(i, newPressure1);
             UpdateEquilibriumComposition(loading, standartChemPotForNewPressure);
-            
-           
+            Console.WriteLine(molarFractions[0] + " after non-isobaric addition of B:     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+
+
             double delta_n1 = loading[1] - initial_composition[1];
             double rateAfterNonIsobaricAdditionOfB = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after non-isobaric addition:" + rateAfterNonIsobaricAdditionOfB);
@@ -470,6 +474,8 @@ namespace Reaction_orders
             for (int i = 0; i < numberOfComponents; i++)
                 n[i] = loading[i];
             UpdateEquilibriumComposition(loading, chemPotForInitialPressure);
+            Console.WriteLine(molarFractions[0] + " after isobaric addition of B:     " + gamma[0] + "    " + gamma[1] + "    " + gamma[2] + "    " + chemPot[0] + "    " + chemPot[1] + "    " + chemPot[2] + "    " + V);
+
             double pressureForRelativeOrderOfB = CalculatePressureAtCurrentConditions();
             double rateAfterIsobaricAdditionB = CalculateCurrentReactionRate();
             Console.WriteLine("Reaction rate after isobaric addition of B: " + rateAfterIsobaricAdditionB);
@@ -910,6 +916,7 @@ namespace Reaction_orders
         }
         static double Xi_SubintegrativeExpression(List<double> args)
         {
+            //return 0;
             double output = 0;
             double x = args[0];
             double r = args[1];
@@ -941,6 +948,7 @@ namespace Reaction_orders
             }
             xi_r_writer.WriteLine(line);
         }
+        
         static double BisectionSolve(Func<double[],double> func,double accurasy, double a, double b, int xVariableIndexInArgs, List<double> additionalFuncArgs)
         {
             Console.WriteLine("Bisection soving start...");
