@@ -124,15 +124,6 @@ namespace Reaction_orders
             LJparameters[1][0] = 1.65517E-21;
             LJparameters[2][0] = 1.65517E-21;
             /////////////////////////////////
-            LJparameters[0][1] = 0;
-            LJparameters[1][1] = 0;
-            LJparameters[2][1] = 0;
-            //LJ parameters
-
-            //LJ parameters
-            LJparameters[0][0] = 0;
-            LJparameters[1][0] = 0;
-            LJparameters[2][0] = 0;
 
             /*LJparameters[0][1] = 0;
             LJparameters[1][1] = 0;
@@ -948,7 +939,32 @@ namespace Reaction_orders
             }
             xi_r_writer.WriteLine(line);
         }
-        
+        static double CalculateDerivative(Func<List<double>, double> func, double x, int xVariableIndexInArgs, List<double> additionalFuncArgs)
+        {
+            List<double> args = new List<double>();
+            int additionalArgsIndex = 0;
+            for (int i = 0; i < additionalFuncArgs.Count + 1; i++)
+            {
+                if (i == xVariableIndexInArgs)
+                    args[i] = x;
+                else
+                {
+                    args[i] = additionalFuncArgs[additionalArgsIndex];
+                    additionalArgsIndex++;
+                }
+            }
+            double dx = x * 1.01;
+            args[xVariableIndexInArgs] = x - 2 * dx;
+            double f1 = func(args);
+            args[xVariableIndexInArgs] = x -  dx;
+            double f2 = func(args);
+            args[xVariableIndexInArgs] = x + 2 * dx;
+            double f3 = func(args);
+            args[xVariableIndexInArgs] = x + dx;
+            double f4 = func(args);
+            double output = (8 * f4 - 8 * f2 - f3 + f1) / (12 * dx) ;
+            return output;
+        }
         static double BisectionSolve(Func<double[],double> func,double accurasy, double a, double b, int xVariableIndexInArgs, List<double> additionalFuncArgs)
         {
             Console.WriteLine("Bisection soving start...");
