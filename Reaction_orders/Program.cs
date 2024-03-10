@@ -2,26 +2,19 @@
 using System.Net.NetworkInformation;
 using System.IO;
 using System.Diagnostics.Tracing;
+using System.Transactions;
 
 namespace Reaction_orders
 {
     internal class Program
     {
+        static int steps = 3;
+        static double n_total = 35000;
         static double k = 1.38*Math.Pow(10, -23);//Boltzman constant
         static double K = Math.Pow(10, -10);
         static double T =15;//Temperature
-        // static double M_a = 18;    //Molar mass
-        //static double M_b = 18;    //Molar mass
-
-        // static double r_a =Math.Pow(10, -9) * 0.14;
-        //static double r_b =Math.Pow(10, -9)*0.14;
-        //static double n_a = 10000;
-        //static double n_b = 10000;
-        //static double E0 = 40000;//J/mol
         static double E0 = 400;//J/mol
         static double V = 0;//Volume
-        //static double Q_a = 1;
-        //static double Q_b = 1;
         static double h= 6.62 * Math.Pow(10, -34);
         static double Nav = 6.02 * Math.Pow(10, 23);
         static double R = 8.314;
@@ -53,7 +46,6 @@ namespace Reaction_orders
         //Calculatin process settings
         static double minV = 2;
         static double maxV = 3;
-        //static double maxV = 20;
         static double nVSteps = 100;
 
         static bool log = false;
@@ -71,7 +63,6 @@ namespace Reaction_orders
 
             Console.WriteLine("Initializing...");
             M = new double[numberOfComponents];
-            //r = new double[numberOfComponents];
             n = new double[numberOfComponents];
             Q = new double[numberOfComponents];
             LJparameters = new double[numberOfComponents][];
@@ -93,7 +84,6 @@ namespace Reaction_orders
             {
                 M[i] = 0.03995;
                 gamma[i] = 1;
-               // r[i] = Math.Pow(10, -9) * 0.14;
                 Q[i] = 1;
                 n[i] = 10000;
                 LJparameters[i] = new double[2];
@@ -124,76 +114,25 @@ namespace Reaction_orders
             LJparameters[1][0] = 1.65517E-21;
             LJparameters[2][0] = 1.65517E-21;
             /////////////////////////////////
-            LJparameters[0][1] = 0;
-            LJparameters[1][1] = 0;
-            LJparameters[2][1] = 0;
-            //LJ parameters
+            /*  LJparameters[0][1] = 0;
+              LJparameters[1][1] = 0;
+              LJparameters[2][1] = 0;
+              //LJ parameters
 
-            //LJ parameters
-            LJparameters[0][0] = 0;
-            LJparameters[1][0] = 0;
-            LJparameters[2][0] = 0;
+              //LJ parameters
+              LJparameters[0][0] = 0;
+              LJparameters[1][0] = 0;
+              LJparameters[2][0] = 0;*/
 
-            /*LJparameters[0][1] = 0;
-            LJparameters[1][1] = 0;
-            LJparameters[2][1] = 0;*/
-            //LJ parameters
-
-            //Ideal gas
-            //epsilon (J/molecule)
-            /*LJparameters[0][0] = 0;
-            LJparameters[1][0] = 0;
-            //sigma (m)
-            LJparameters[0][1] = 3.40984E-10;
-            LJparameters[1][1] = 3.40984E-10;*/
-
-
-            //Isotherm(true);
-            //Isotherm();
-
-            //double bestV = FindVolumeCorrespondingToParticularPressure(101325);
-            //Console.WriteLine("Best volume = " + bestV);
-
-            /* double rrate = CalculateCurrentReactionRate() / (Nav*1000); //[mol/(s*l)]
-             Console.WriteLine("Reactio rate: " + rrate + " mol/(s*l)");
-             Console.WriteLine("Concentration: " + (N[0] / (V * Nav * 1000)) + " M");*/
-
-            //CalculateReactionOrders();
-
+            CalculateFreeCellVolumeSummary();
             //Calculating standart chemical potentials
             for (int i = 0; i < numberOfComponents; i++)
             {
-                for (int j = 0; j < numberOfComponents; j++)
-                    n[j] = 0;
-                n[i] = 35000;
-                UpdateParameters();
-                V = FindVolumeCorrespondingToParticularPressure(101325);
-                UpdateParameters();
-                double p = CalculatePressureAtCurrentConditions();
-                UpdateParameters();
-                double F = -k * T * Calculate_LnZ();
-                n[i] = 35350;
-                UpdateParameters();
-                double F2 = -k * T * Calculate_LnZ();
-                standartChemPot[i] = (F2 - F) / 350;
-                gamma[i] = 1;
-            }
-            
-            for (int i = 0; i < numberOfComponents; i++)
+                standartChemPot[i] = CalculateStanartChemicalPotential(i, 101325);
                 chemPotForInitialPressure[i] = standartChemPot[i];
+            }
 
-            //n[0] = 34928.66083 / 2.0;
-            //n[1] = 34928.66083 / 2.0;
-            n[0] = 35000 / 2.0;
-            n[1] = 35000 / 2.0;
-            n[2] = 0;
-           /* standartChemPot[0] = -2383.73086958992;
-            standartChemPot[1] = -2383.69605476199;
-            standartChemPot[2] = -2383.72845056693;*/
-
-            UpdateParameters();
-
-            ReactionOrdersForDifferntCompositions(10);
+            ReactionOrdersForDifferntCompositions(steps);
 
             //Console.WriteLine("Pressure: " + CalculatePressureAtCurrentConditions());
 
@@ -219,72 +158,23 @@ namespace Reaction_orders
             }
                 
             return BisectionSolve(ComponentPartialVolumeEquation, Vaccuracy, Vmin,Vmax, 1, new List<double>() { targetPressure, n[0], n[1], n[2] });
-            /*
-             * ////////////////////OLD ALGORITHM//////////////////////////////////////////////////
-            double Vstep;
-             if (Vaccuracy== -1)
-                 Vstep = (maxV - minV) / 100;
-             else
-                 Vstep = Vaccuracy;
-             List<KeyValuePair<double, double>> VvsP = new List<KeyValuePair<double, double>>();
-             List<KeyValuePair<double, double>> VvsF = new List<KeyValuePair<double, double>>();
-
-             log_writer.WriteLine("Find Volume Corresponding To ParticularPressure");
-             log_writer.WriteLine("targetPressure: "+ targetPressure);
-             log_writer.WriteLine("Vmin: " + minV);
-             log_writer.WriteLine("Vmax: " + maxV);
-             for (V = minV; V <= maxV; V += Vstep)
-             {
-                 UpdateParameters();
-                 double F = -k * T * Calculate_LnZ();
-                 log_writer.WriteLine("    V: " + V +"    F: "+ F);
-                 VvsF.Add(new KeyValuePair<double, double>(V, F));
-                 Console.WriteLine("Volume: " + V + "     F: " + F);
-             }
-             log_writer.WriteLine("    Pressure calculation");
-             for (int i = 1; i < VvsF.Count; i++)
-             {
-                 double pressure = -(VvsF[i].Value - VvsF[i - 1].Value) / (VvsF[i].Key - VvsF[i - 1].Key);
-                 VvsP.Add(new KeyValuePair<double, double>(VvsF[i].Key, pressure));
-                 log_writer.WriteLine("    V: " + V + "    P: " + pressure);
-                 Console.WriteLine("Volume: " + VvsF[i].Key + "     Pressure: " + pressure);
-             }
-             int iterationBest = -1;
-             for(int i = 0; i < VvsP.Count-1; i++)
-             {
-                 if (targetPressure - VvsP[i].Value<0 && targetPressure - VvsP[i+1].Value >0)
-                 {
-                     iterationBest = i;
-                     break;
-                 }
-             }
-
-             if (iterationBest < 0)
-             {
-                 log_writer.WriteLine("    No best iteration");
-                 log_writer.WriteLine("-----------------------------------Find Volume Corresponding To ParticularPressure-------------------------------------");
-                 return 0;
-             }
-             double outputV = VvsP[iterationBest].Key + (VvsP[iterationBest+1].Key - VvsP[iterationBest].Key) * (targetPressure- VvsP[iterationBest].Value) / (VvsP[iterationBest+1].Value - VvsP[iterationBest].Value);
-             log_writer.WriteLine("    Best volume: " + outputV);
-             log_writer.WriteLine("-----------------------------------Find Volume Corresponding To ParticularPressure-------------------------------------");
-             return outputV;*/
+           
          }
          /// <summary>
          /// Calculates reaction orders for different compositions of two component system
          /// </summary>
          /// <param name="steps"></param>
          /// <param name="n_sum"></param>
-        static void ReactionOrdersForDifferntCompositions(int steps = 5, double n_sum=35000)
+        static void ReactionOrdersForDifferntCompositions(int steps)
         {
             StreamWriter orderWriter = new StreamWriter("orders.csv");
             orderWriter.WriteLine("x0;x1;V;absolute;relative");
-            double xStep = 0.98 / (double)steps;
+            double xStep = 0.97 / (double)steps;
             for(double x0 = 0.01; x0 < 1; x0 += xStep)
             {
                 Console.WriteLine("-----------------------NEW COMPOSITION-------------------------");
-                n[0] = n_sum * x0;
-                n[1] = n_sum * (1 - x0);
+                n[0] = n_total * x0;
+                n[1] = n_total * (1 - x0);
                 n[2] = 0;
                 V = FindVolumeCorrespondingToParticularPressure(101325);
                 UpdateParameters();
@@ -296,7 +186,7 @@ namespace Reaction_orders
 
                 Console.WriteLine("V=" +V);
                 Console.WriteLine("p=" + p);
-                List<double> orders = CalculateReactionOrders(n_sum * x0, n_sum * (1 - x0));
+                List<double> orders = CalculateReactionOrders(n_total * x0, n_total * (1 - x0));
                 Console.WriteLine("Absolute order A: " + orders[0]);
                 Console.WriteLine("Relative order A: " + orders[1]);
                 Console.WriteLine("Absolute order B: " + orders[2]);
@@ -328,17 +218,32 @@ namespace Reaction_orders
             double F = -k * T * Calculate_LnZ();    
             for(int i = 0; i < numberOfComponents; i++)
             {
+                for (int j = 0; j < numberOfComponents; j++)
+                    n[j] = composition[j];
                 //Calculating chemical potentials for each component
                 //double dn = old_composition[i] * 0.01;
                 double dn = n[i]*0.01;
                 //if (dn < 100)
                 //    dn = 100;
-                n[i] += dn;
+                n[i] = composition[i] - 2 * dn;
+                UpdateParameters();
+                double F0 = -k * T * Calculate_LnZ();
+
+                n[i] = composition[i] -  dn;
+                UpdateParameters();
+                double F1 = -k * T * Calculate_LnZ();
+
+                n[i] = composition[i] + dn;
                 UpdateParameters();
                 double F2 = -k * T * Calculate_LnZ();
+
+                n[i] = composition[i] + 2 * dn;
+                UpdateParameters();
+                double F3 = -k * T * Calculate_LnZ();
+
                 n[i] = old_composition[i];
                 UpdateParameters();
-                double cpt = (F2-F) / dn;
+                double cpt = (8*F2-8*F1+F0-F3) / (12*dn);
                 chemPot[i] = cpt;
                 double activity =Math.Exp((chemPot[i] - standartPotentials[i]) / (R * T));
                 if (molarFractions[i] != 0)
@@ -393,10 +298,11 @@ namespace Reaction_orders
                 n[i] = loading[i];
             double newPressure = CalculatePressureAtCurrentConditions();
             double[] standartChemPotForNewPressure = new double[numberOfComponents];
+
             for (int i = 0; i < numberOfComponents; i++)
                 standartChemPotForNewPressure[i] = CalculateStanartChemicalPotential(i, newPressure);
 
-            UpdateEquilibriumComposition(loading,standartChemPotForNewPressure);
+            UpdateEquilibriumComposition(loading, standartChemPotForNewPressure);
             
             double delta_n0 = loading[0] - initial_composition[0];
             double rateAfterNonIsobaricAddition = CalculateCurrentReactionRate();
@@ -504,18 +410,33 @@ namespace Reaction_orders
                 old_composition[i] = n[i];
                 n[i] = 0;
             }
-            n[component] = 35000;
+            double n0 = n_total;
+            double dn = 0.01 * n0;
+            n[component] = n0;
             //////////////////////
             UpdateParameters();
             V = FindVolumeCorrespondingToParticularPressure(pressure);
             UpdateParameters();
             double p = CalculatePressureAtCurrentConditions();
+
+
+            n[component] = n0 - 2 * dn;
             UpdateParameters();
-            double F = -k * T * Calculate_LnZ();
-            n[component] = 35350;
+            double F0 = -k * T * Calculate_LnZ();
+
+            n[component] = n0 - dn;
+            UpdateParameters();
+            double F1 = -k * T * Calculate_LnZ();
+
+            n[component] = n0 + dn;
             UpdateParameters();
             double F2 = -k * T * Calculate_LnZ();
-            output = (F2 - F) / 350;
+
+            n[component] = n0 + 2 * dn;
+            UpdateParameters();
+            double F3 = -k * T * Calculate_LnZ();
+            output = (8*F2-8*F1+F0-F3) / (12*dn);
+
             //////////////////////
             V = oldV;
             for (int i = 0; i < numberOfComponents; i++)
@@ -535,7 +456,7 @@ namespace Reaction_orders
              Console.WriteLine("Volume, m^3                   Pressure, Pa");
              double Vstep = (maxV - minV) / nVSteps;
              StreamWriter isotherm_writer = new StreamWriter(File.Create("isotherm.txt"));
-             xi_r_writer = new StreamWriter(File.Create("xi_r"));
+             //xi_r_writer = new StreamWriter(File.Create("xi_r"));
              isotherm_writer.WriteLine("Volume; a; Vcell;Qtrans1;freeV1; Uself1_kt;Qtrans2;freeV2; Uself2_kt;U12_kT;lnG;F; density");
                  for (V = minV; V <= maxV; V += Vstep)
                  {
@@ -557,7 +478,7 @@ namespace Reaction_orders
                      isotherm_writer.WriteLine(isotherm_writer_line);
                  }
              isotherm_writer.Close();
-             xi_r_writer.Close();
+             //xi_r_writer.Close();
              Console.WriteLine("Isotherm calculation is done");
          }
         static double CalculatePressureForParticularVolumeAndAmounts(double newV, double[] amounts)
@@ -593,53 +514,30 @@ namespace Reaction_orders
          static double CalculatePressureAtCurrentConditions()
          {
              UpdateParameters();
-             double oldF = -k * T * Calculate_LnZ();
-             double oldVolume = V;
-             //double newVolume = 1.01*V;
-             double newVolume = V + 0.01;
-             V = newVolume;
-             UpdateParameters();
-             double newF = -k * T * Calculate_LnZ();
+            double oldVolume = V;
+            double dV = 0.01 * V;
+
+            V = oldVolume - 2 * dV;
+            UpdateParameters();
+            double F0 = -k * T * Calculate_LnZ();
+
+            V = oldVolume -  dV;
+            UpdateParameters();
+            double F1 = -k * T * Calculate_LnZ();
+
+            V = oldVolume + dV;
+            UpdateParameters();
+            double F2 = -k * T * Calculate_LnZ();
+
+            V = oldVolume + 2 * dV;
+            UpdateParameters();
+            double F3 = -k * T * Calculate_LnZ();
+
              V = oldVolume;
              UpdateParameters();
-             return -(newF-oldF) / (newVolume-oldVolume);
+             return -(8*F2-8*F1+F0-F3) / (12*dV);
          }
-         static double Calculate_LnZ_Gas()
-         {
-             // Console.WriteLine("Calculating lnZ");
-             double output = 0;
-             log_writer.WriteLine("Calculating lnZ");
-             for (int i = 0; i < numberOfComponents; i++)
-             {
-                 log_writer.WriteLine("    //--------------Component------------");
-                 double trans = CalculateLnTransitionalStatisticalSum(i);
-                 isotherm_writer_line += trans + ";";
-                 output += trans;
-                 log_writer.WriteLine("    LnQtrans = " + trans);
-                 output += N[i] * Math.Log(V);
-
-                // double selfEnergy = z * N[i] * LJpotential(a, i, i) / 2.0;
-                 //log_writer.WriteLine("    Self energy (J) = " + selfEnergy);
-                 //log_writer.WriteLine("    Self energy/kT = " + selfEnergy / (k * T));
-                 //isotherm_writer_line += (-selfEnergy / (k * T)) + ";";
-                 //output -= selfEnergy / (k * T);
-             }
-             //if (idealGas)
-             //    return output;
-             /*for (int i = 0; i < numberOfComponents; i++)
-                 for (int j = 0; j < i; j++)
-                 {
-                     if (i == j)
-                         continue;
-                     log_writer.WriteLine("    Interaction energy between " + i + " and " + j);
-                     double interactionEnergy = (N[i] * N[j]*LJpotential(a,i,j)) / ((N[i] + N[j]));
-                     log_writer.WriteLine("    Interaction energy (J) =  " + interactionEnergy);
-                     log_writer.WriteLine("    Interaction energy/kT =  " + interactionEnergy / (k * T));
-                     output -= interactionEnergy / (k * T);
-                     isotherm_writer_line += (-interactionEnergy / (k * T)) + ";";
-                 }*/
-            return output;
-        }
+         
         static double Calculate_LnZ()
         {
            // Console.WriteLine("Calculating lnZ");
@@ -654,7 +552,7 @@ namespace Reaction_orders
                 isotherm_writer_line += trans + ";";
                 output += trans;
                 log_writer.WriteLine("    LnQtrans = " + trans);
-                double freeCellVolume = CalculateFreeCellVolume(i);
+                double freeCellVolume = CalculateFreeCellVolumeApproximation(i);
                 isotherm_writer_line += freeCellVolume + ";";
                 output += N[i] * Math.Log(freeCellVolume);
                 log_writer.WriteLine("    Free cell volume (m3) = " + freeCellVolume);
@@ -673,7 +571,7 @@ namespace Reaction_orders
                     if (i == j || n[i] == 0 || n[j]==0)
                         continue;
                     log_writer.WriteLine("    Interaction energy between " + i + " and " + j);
-                    double interactionEnergy = (w[i][j] * N[i] * N[j] * 2.0) / ((beta[i][j] + 1.0) * (N[i] + N[j]));
+                    double interactionEnergy = w[i][j] * corelatedPairsNumber[i][j];
                     log_writer.WriteLine("    Interaction energy (J) =  " + interactionEnergy);
                     log_writer.WriteLine("    Interaction energy/kT =  " + interactionEnergy / (k * T));
                     output -= interactionEnergy / (k * T);
@@ -906,6 +804,7 @@ namespace Reaction_orders
         }
         static double XiFunction(double r,double component)
         {
+            return 0;
             double integral = DefiniteIntegral(Xi_SubintegrativeExpression, -a, a, 0, new List<double>() { r, component });
             double output = integral / (2.0 * a);
             int y = 0;
@@ -916,7 +815,6 @@ namespace Reaction_orders
         }
         static double Xi_SubintegrativeExpression(List<double> args)
         {
-            //return 0;
             double output = 0;
             double x = args[0];
             double r = args[1];
@@ -934,21 +832,113 @@ namespace Reaction_orders
             double output= 4.0 * epsilonMatrix[component1][component2] * (Math.Pow(sigma_r,12.0) - Math.Pow(sigma_r, 6.0));
             return output;
         }
-        static StreamWriter xi_r_writer;
-        static void GrapXiFromR()
+        static double CalculateFreeCellVolumeApproximation(int component)
         {
-            return;
-            string line = "";
-            double step = 10E-12;
-            line += a + ";";
-            for(double r = 0; r < a; r += step)
+            if (!summaryIsCompleted)
+                return CalculateFreeCellVolume(component);
+            double n_sum = n[0] + n[1];
+            double x0 = n[0] / n_sum;
+
+            double xStep = 0.97 / (double)steps;
+            double x_min = 0;
+            double x_max = 0;
+            if (x0 < 0.01)
             {
-                double xi_r = XiFunction(r, 0);
-                line += xi_r + ";";
+                x_min = 0.01;
+                x_max = x_min + xStep;
             }
-            xi_r_writer.WriteLine(line);
+            else
+            {
+
+                for (double x0_try = 0.01; x0_try < 1; x0_try += xStep)
+                {
+                    if (x0_try + xStep > 1)
+                    {
+                        x_max = x0_try;
+                        x_min = x0_try - xStep;
+                        continue;
+                    }
+                    if (x0_try <= x0 && x0_try + xStep > x0)
+                    {
+                        x_min = x0_try;
+                        x_max = x0_try + xStep;
+                    }
+                }
+            }
+
+            double n_min = 0;
+            double n_max = 0;
+            for (int i = 0; i < aproximationArgsForNsum.Count-1; i++)
+            {
+                if (aproximationArgsForNsum[i]<=n_sum && aproximationArgsForNsum[i + 1] > n_sum)
+                {
+                    n_min = aproximationArgsForNsum[i];
+                    n_max = aproximationArgsForNsum[i + 1];
+                }
+            }
+
+            Vector args_0 = new Vector(x_min, n_min, component);
+            Vector args_0_dx = new Vector(x_max, n_min, component);
+            Vector args_0_dn = new Vector(x_min, n_max, component);
+            double f_0 = FindAppprimationForNearestVector(args_0);
+            double f_0_dx = FindAppprimationForNearestVector(args_0_dx);
+            double f_0_dn = FindAppprimationForNearestVector(args_0_dn);
+            double dx = x_max - x_min;
+            double dn = n_max - n_min;
+            double f = f_0 + (x0 - x_min) * (f_0_dx - f_0) / (dx) + (n_sum - n_min) * (f_0_dn - f_0) / (dn);
+            return f;
         }
-        
+        static double FindAppprimationForNearestVector(Vector targetV)
+        {
+            double minDistance = 100000000000;
+            Vector minVector = new Vector(0, 0, 0);
+            foreach(Vector v in freeCellFunctionSummary.Keys)
+            {
+                if (targetV.component != v.component)
+                    continue;
+
+                double d = (targetV.n_sum-v.n_sum)* (targetV.n_sum - v.n_sum)+(targetV.x0- v.x0)* (targetV.x0 - v.x0);
+                if (d < minDistance)
+                {
+                    minDistance = d;
+                    minVector = v;
+                }
+            }
+            return freeCellFunctionSummary[minVector];
+        }
+        static Dictionary<Vector, double> freeCellFunctionSummary;
+        static List<double> aproximationArgsForNsum;
+        static bool summaryIsCompleted = false;
+        static void CalculateFreeCellVolumeSummary()
+        {
+            Console.WriteLine("Free volume summary begin...");
+            freeCellFunctionSummary = new Dictionary<Vector, double>();
+            aproximationArgsForNsum = new List<double>();
+
+            double xStep = 0.97 / (double)steps;
+            for (double x0 = 0.01; x0 < 1; x0 += xStep)
+            {
+                for (double mult = 0.97;mult<=1.035;mult+=0.01)
+                {
+                    aproximationArgsForNsum.Add(mult * n_total);
+                    n[0] = mult*n_total * x0;
+                    n[1] = mult * n_total * (1 - x0);
+                    n[2] = K * n[0] * n[1];
+                    UpdateParameters();
+                    V = FindVolumeCorrespondingToParticularPressure(101325);
+                    UpdateParameters();
+                    double[] freeCellVolumes = new double[3];
+                    for (int i = 0; i < 3; i++)
+                    {
+                        freeCellVolumes[i] = CalculateFreeCellVolume(i);
+                        Vector args = new Vector(x0, mult * n_total, i);
+                        freeCellFunctionSummary.Add(args, freeCellVolumes[i]);
+                    }
+                }
+            }
+            summaryIsCompleted = true;
+            Console.WriteLine("Free volume summary end...");
+        }
         static double BisectionSolve(Func<double[],double> func,double accurasy, double a, double b, int xVariableIndexInArgs, List<double> additionalFuncArgs)
         {
             Console.WriteLine("Bisection soving start...");
@@ -1022,6 +1012,18 @@ namespace Reaction_orders
                     currentRoot = (a + b) / 2;
                 }
                 return currentRoot;
+        }
+    }
+    public struct Vector
+    {
+        public double x0;
+        public double n_sum;
+        public int component;
+        public Vector(double _x0, double _n_sum, int _component)
+        {
+            x0 = _x0;
+            n_sum = _n_sum;
+            component = _component;
         }
     }
 }
